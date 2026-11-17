@@ -15,9 +15,11 @@ on:
 permissions:
   contents: read
 
+# Los apply/destroy de Dev van en fila (nunca dos a la vez); cada PR tiene su propio grupo para que su plan
+# no espere detrás de un apply pendiente de aprobación.
 concurrency:
-  group: terraform-dev
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && format('terraform-pr-{0}', github.event.number) || 'terraform-dev' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   AWS_REGION: us-east-1
