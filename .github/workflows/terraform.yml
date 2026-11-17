@@ -1,0 +1,161 @@
+name: terraform
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      accion:
+        description: "apply = encender/actualizar Dev · destroy = apagar Dev"
+        type: choice
+        options: [apply, destroy]
+        default: apply
+
+permissions:
+  contents: read
+
+concurrency:
+  group: terraform-dev
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  TF_IN_AUTOMATION: "true"
+  TF_VAR_alert_email: ${{ vars.ALERT_EMAIL }}
+  TF_VERSION: 1.16.6
+  DEV: envs/dev
+
+jobs:
+  validar:
+    name: fmt · validate · checkov
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+      - run: terraform fmt -check -recursive
+      - name: validate (envs/dev y bootstrap)
+        run: |
+          for d in envs/dev bootstrap; do
+            terraform -chdir=$d init -backend=false -input=false >/dev/null
+            terraform -chdir=$d validate
+          done
+      - name: checkov (escaneo de seguridad del IaC)
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          framework: terraform
+          soft_fail: true
+          output_format: cli
+
+  plan:
+    name: terraform plan (Dev)
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    needs: validar
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - run: terraform -chdir=$DEV init -input=false
+      - id: plan
+        run: |
+          set +e
+          terraform -chdir=$DEV plan -input=false -no-color -lock=false > plan.txt 2>&1
+          code=$?
+          cat plan.txt
+          exit $code
+      - name: Comentar el plan en el PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const plan = fs.readFileSync("plan.txt", "utf8");
+            const resumen = (plan.match(/^(Plan:.*|No changes\..*)$/m) || ["(ver el log)"])[0];
+            const cuerpo = `### terraform plan · envs/dev\n**${resumen}**\n\n<details><summary>Plan completo</summary>\n\n\`\`\`\n${plan.slice(-60000)}\n\`\`\`\n</details>`;
+            const { data: comentarios } = await github.rest.issues.listComments({ ...context.repo, issue_number: context.issue.number });
+            const previo = comentarios.find((c) => c.body.startsWith("### terraform plan"));
+            if (previo) await github.rest.issues.updateComment({ ...context.repo, comment_id: previo.id, body: cuerpo });
+            else await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body: cuerpo });
+
+  apply:
+    name: terraform apply (Dev)
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.accion == 'apply')
+    needs: validar
+    runs-on: ubuntu-latest
+    environment:
+      name: infra
+      url: https://dev.kut.nz
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - run: terraform -chdir=$DEV init -input=false
+      # Si Dev estaba apagado, el repositorio de ECR se crea vacío: se siembra con la última imagen
+      # publicada en Docker Hub para que las instancias arranquen (luego el pipeline de backend la actualiza).
+      - name: ECR + imagen inicial
+        run: |
+          terraform -chdir=$DEV apply -input=false -auto-approve \
+            -target=module.kutnz.aws_ecr_repository.app -target=module.kutnz.aws_ecr_lifecycle_policy.app
+          REPO=$(terraform -chdir=$DEV output -raw ecr_repository)
+          if ! aws ecr describe-images --repository-name "${REPO##*/}" --image-ids imageTag=latest >/dev/null 2>&1; then
+            aws ecr get-login-password | docker login --username AWS --password-stdin "${REPO%%/*}"
+            docker pull -q docker.io/ikramzaldivar/kutnz-api:latest
+            docker tag docker.io/ikramzaldivar/kutnz-api:latest "$REPO:latest"
+            docker push -q "$REPO:latest"
+          fi
+      - name: terraform apply
+        run: terraform -chdir=$DEV apply -input=false -auto-approve -no-color
+      - name: Resumen
+        run: |
+          {
+            echo "## Dev encendido"
+            echo '```'
+            terraform -chdir=$DEV output
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  destroy:
+    name: terraform destroy (apagar Dev)
+    if: github.event_name == 'workflow_dispatch' && inputs.accion == 'destroy'
+    needs: validar
+    runs-on: ubuntu-latest
+    environment:
+      name: infra
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - run: terraform -chdir=$DEV init -input=false
+      - run: terraform -chdir=$DEV destroy -input=false -auto-approve -no-color
