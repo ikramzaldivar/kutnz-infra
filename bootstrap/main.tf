@@ -29,6 +29,11 @@ variable "github_owner" {
   default = "ikramzaldivar"
 }
 
+variable "github_owner_id" {
+  type    = number
+  default = 112355542
+}
+
 data "aws_caller_identity" "me" {}
 
 data "aws_iam_openid_connect_provider" "github" {
@@ -38,7 +43,10 @@ data "aws_iam_openid_connect_provider" "github" {
 locals {
   account = data.aws_caller_identity.me.account_id
   region  = "us-east-1"
-  repo    = { for r in ["kutnz-backend", "kutnz-frontend", "kutnz-infra"] : r => "repo:${var.github_owner}/${r}" }
+  # GitHub firma el claim "sub" con el formato inmutable (usuario@id/repo@id): si alguien borra y vuelve a
+  # crear un repo con el mismo nombre, su ID cambia y ya no puede asumir estos roles.
+  repo_ids = { "kutnz-backend" = 1461585639, "kutnz-frontend" = 1461585745, "kutnz-infra" = 1461585872 }
+  repo     = { for r, id in local.repo_ids : r => "repo:${var.github_owner}@${var.github_owner_id}/${r}@${id}" }
 
   # Nombre del stack que puede tocar el pipeline en cada ambiente.
   ambientes = {
