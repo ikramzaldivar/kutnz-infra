@@ -47,8 +47,9 @@ variable "asg_max" {
 }
 
 variable "cache_node_type" {
-  type    = string
-  default = "cache.t4g.micro"
+  description = "Tipo de nodo de ElastiCache (Valkey)."
+  type        = string
+  default     = "cache.t4g.micro"
 }
 
 variable "alert_email" {
@@ -57,8 +58,9 @@ variable "alert_email" {
 }
 
 variable "monthly_budget_usd" {
-  type    = number
-  default = 40
+  description = "Presupuesto mensual en USD; AWS Budgets avisa a alert_email al acercarse."
+  type        = number
+  default     = 40
 }
 
 variable "safe_browsing_api_key" {
@@ -69,8 +71,9 @@ variable "safe_browsing_api_key" {
 }
 
 variable "vpc_cidr" {
-  type    = string
-  default = "10.20.0.0/16"
+  description = "Bloque CIDR de la VPC del ambiente."
+  type        = string
+  default     = "10.20.0.0/16"
 }
 
 # IPs exentas SOLO del rate limit global, para pruebas de carga propias (k6). Vacío en operación normal.
@@ -123,6 +126,7 @@ variable "refresh_min_healthy" {
 }
 
 variable "refresh_max_healthy" {
-  type    = number
-  default = 100
+  description = "Instance refresh: porcentaje máximo sano (ver refresh_min_healthy)."
+  type        = number
+  default     = 100
 }
