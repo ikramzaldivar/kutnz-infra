@@ -1,11 +1,13 @@
 variable "region" {
-  type    = string
-  default = "us-east-1"
+  description = "Región de AWS del ambiente."
+  type        = string
+  default     = "us-east-1"
 }
 
 variable "name" {
-  type    = string
-  default = "kutnz"
+  description = "Prefijo de los nombres de los recursos."
+  type        = string
+  default     = "kutnz"
 }
 
 variable "domain" {
@@ -27,13 +29,15 @@ variable "image_tag" {
 }
 
 variable "instance_type" {
-  type    = string
-  default = "t3.small"
+  description = "Tipo de instancia EC2 del ASG."
+  type        = string
+  default     = "t3.small"
 }
 
 variable "asg_min" {
-  type    = number
-  default = 2
+  description = "Número mínimo de instancias del ASG."
+  type        = number
+  default     = 2
 }
 
 variable "asg_max" {
