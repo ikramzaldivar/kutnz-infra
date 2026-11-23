@@ -6,3 +6,7 @@
 tfplan
 crash.log
 *.log
+
+# Editores
+.vscode/
+.idea/

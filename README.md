@@ -44,3 +44,10 @@ eval "$(aws configure export-credentials --profile kutnz --region us-east-1 --fo
 terraform -chdir=envs/dev init
 terraform -chdir=envs/dev plan
 ```
+
+Antes de abrir un PR conviene correr lo mismo que revisa el pipeline:
+
+```bash
+terraform fmt -check -recursive
+terraform -chdir=envs/dev validate
+```
