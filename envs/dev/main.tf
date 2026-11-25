@@ -37,6 +37,7 @@ module "kutnz" {
   zone_name = "kut.nz" # los registros de dev.kut.nz viven en la zona de kut.nz
   vpc_cidr  = "10.30.0.0/16"
 
+  # Capacidad reducida respecto a Prod (ver la tabla del README).
   instance_type       = "t3.small"
   asg_min             = 1
   asg_max             = 2
@@ -50,7 +51,7 @@ module "kutnz" {
   }
 
   alert_email        = var.alert_email
-  monthly_budget_usd = 15
+  monthly_budget_usd = 15 # Dev se apaga cuando no se usa; un gasto mayor indica algo encendido de más
 }
 
 variable "alert_email" {
