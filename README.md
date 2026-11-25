@@ -51,3 +51,9 @@ Antes de abrir un PR conviene correr lo mismo que revisa el pipeline:
 terraform fmt -check -recursive
 terraform -chdir=envs/dev validate
 ```
+
+Para consultar los datos del ambiente ya creado (URL, ASG, ECR, CloudFront y bucket de estáticos):
+
+```bash
+terraform -chdir=envs/dev output
+```
