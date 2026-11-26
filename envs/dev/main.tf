@@ -56,6 +56,7 @@ module "kutnz" {
 variable "alert_email" {
   description = "Correo para alarmas y presupuesto (en GitHub: variable TF_VAR_alert_email)."
   type        = string
+  sensitive   = true # el plan se publica en los PR de un repo público: no mostrar el correo
 }
 
 output "url" {

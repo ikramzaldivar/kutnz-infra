@@ -55,6 +55,7 @@ variable "cache_node_type" {
 variable "alert_email" {
   description = "Correo para alarmas de CloudWatch y del presupuesto."
   type        = string
+  sensitive   = true # el plan se publica en los PR de un repo público: no mostrar el correo
 }
 
 variable "monthly_budget_usd" {
