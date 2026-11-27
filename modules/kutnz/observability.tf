@@ -217,8 +217,9 @@ resource "aws_budgets_budget" "monthly" {
   limit_unit   = "USD"
   time_unit    = "MONTHLY"
   cost_filter {
-    name   = "TagKeyValue"
-    values = ["user:Project$${var.name}"]
+    name = "TagKeyValue"
+    # Formato de AWS: "user:<tag>$<valor>". Con "$${...}" HCL escribía "${var.name}" literal y el filtro no coincidía con nada.
+    values = [format("user:Project$%s", var.name)]
   }
   notification {
     comparison_operator        = "GREATER_THAN"
