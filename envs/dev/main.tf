@@ -37,6 +37,7 @@ module "kutnz" {
   zone_name = "kut.nz" # los registros de dev.kut.nz viven en la zona de kut.nz
   vpc_cidr  = "10.30.0.0/16"
 
+  # Capacidad reducida respecto a Prod (ver la tabla del README).
   instance_type       = "t3.small"
   asg_min             = 1
   asg_max             = 2
@@ -50,7 +51,7 @@ module "kutnz" {
   }
 
   alert_email        = var.alert_email
-  monthly_budget_usd = 15
+  monthly_budget_usd = 15 # Dev se apaga cuando no se usa; un gasto mayor indica algo encendido de más
 }
 
 variable "alert_email" {
@@ -59,23 +60,28 @@ variable "alert_email" {
 }
 
 output "url" {
-  value = module.kutnz.url
+  description = "URL pública de Dev."
+  value       = module.kutnz.url
 }
 
 output "asg_name" {
-  value = module.kutnz.asg_name
+  description = "Nombre del Auto Scaling Group de la API en Dev."
+  value       = module.kutnz.asg_name
 }
 
 output "ecr_repository" {
-  value = module.kutnz.ecr_repository
+  description = "URL del repositorio de ECR de Dev."
+  value       = module.kutnz.ecr_repository
 }
 
 output "cloudfront_distribution_id" {
-  value = module.kutnz.cloudfront_distribution_id
+  description = "ID de la distribución de CloudFront de Dev."
+  value       = module.kutnz.cloudfront_distribution_id
 }
 
 output "static_bucket" {
-  value = module.kutnz.static_bucket
+  description = "Bucket de S3 de los archivos de /static/* en Dev."
+  value       = module.kutnz.static_bucket
 }
 
 output "dashboard_url" {

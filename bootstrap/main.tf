@@ -25,13 +25,15 @@ provider "aws" {
 }
 
 variable "github_owner" {
-  type    = string
-  default = "ikramzaldivar"
+  description = "Dueño en GitHub de los repos que pueden asumir los roles."
+  type        = string
+  default     = "ikramzaldivar"
 }
 
 variable "github_owner_id" {
-  type    = number
-  default = 112355542
+  description = "ID numérico e inmutable del dueño en GitHub; se usa en el claim sub de OIDC."
+  type        = number
+  default     = 112355542
 }
 
 data "aws_caller_identity" "me" {}
@@ -226,10 +228,12 @@ resource "aws_iam_role_policy" "infra_plan_extra" {
 }
 
 output "tfstate_bucket" {
-  value = aws_s3_bucket.tfstate.bucket
+  description = "Bucket del estado de Terraform de los ambientes."
+  value       = aws_s3_bucket.tfstate.bucket
 }
 
 output "roles" {
+  description = "ARN de cada rol de GitHub Actions (se guardan como AWS_ROLE_ARN en cada environment)."
   value = merge(
     { for k, r in aws_iam_role.deploy : "deploy_${k}" => r.arn },
     { for k, r in aws_iam_role.infra : "infra_${k}" => r.arn },

@@ -3,6 +3,7 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
+# Las dos primeras zonas disponibles de la región.
 locals {
   azs = slice(data.aws_availability_zones.available.names, 0, 2)
 }
@@ -18,6 +19,8 @@ resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 }
 
+# Subredes /24 dentro del /16 de la VPC: públicas en los bloques 0–1 y privadas en 10–11
+# (p. ej. 10.30.0.0/24 y 10.30.10.0/24 en Dev), así queda espacio para agregar más.
 resource "aws_subnet" "public" {
   count                   = 2
   vpc_id                  = aws_vpc.main.id
